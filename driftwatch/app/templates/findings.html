@@ -65,6 +65,51 @@
     <div class="note">
       <strong>Safe suggestion:</strong> {{ finding.suggested_action }}
     </div>
+    <div class="workflow-grid">
+      <section class="workflow-card">
+        <h4>Status workflow</h4>
+        <form class="inline-form" method="post" action="/api/findings/{{ finding.id }}/status">
+          <input type="hidden" name="redirect_to" value="{{ redirect_to }}" />
+          <label>
+            Status
+            <select name="status">
+              {% for option in finding_statuses %}
+              <option value="{{ option }}" {% if finding.status == option %}selected{% endif %}>{{ option }}</option>
+              {% endfor %}
+            </select>
+          </label>
+          <button type="submit">Save status</button>
+        </form>
+      </section>
+      <section class="workflow-card">
+        <h4>Analyst notes</h4>
+        <form class="note-form" method="post" action="/api/findings/{{ finding.id }}/notes">
+          <input type="hidden" name="redirect_to" value="{{ redirect_to }}" />
+          <label>
+            Analyst
+            <input type="text" name="author" value="local-analyst" />
+          </label>
+          <label>
+            Note
+            <textarea name="note_text" rows="3" placeholder="Add triage notes, hypotheses, validation steps, or rationale."></textarea>
+          </label>
+          <button type="submit">Add note</button>
+        </form>
+        <div class="notes-list">
+          {% for note in finding.notes %}
+          <article class="note-entry">
+            <div class="note-header">
+              <strong>{{ note.author }}</strong>
+              <small>{{ note.created_at }}</small>
+            </div>
+            <p>{{ note.note_text }}</p>
+          </article>
+          {% else %}
+          <p class="subtle">No analyst notes yet.</p>
+          {% endfor %}
+        </div>
+      </section>
+    </div>
     <details>
       <summary>Evidence</summary>
       <pre>{{ finding.evidence_json | tojson(indent=2) }}</pre>

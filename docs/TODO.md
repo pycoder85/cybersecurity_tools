@@ -11,3 +11,4 @@
 - Add rate-limited background scanning and health reporting.
 - Add richer export options including filters, evidence bundles, and signed reports.
 - Add dashboard-side evidence export and downloadable report snapshots.
+- Add per-user analyst identity, note attribution hardening, and status-change audit history.

@@ -67,6 +67,11 @@ class Finding(Base):
 
     scan: Mapped["Scan"] = relationship(back_populates="findings")
     evidence_entries: Mapped[list["Evidence"]] = relationship(back_populates="finding")
+    notes: Mapped[list["FindingNote"]] = relationship(
+        back_populates="finding",
+        cascade="all, delete-orphan",
+        order_by="FindingNote.created_at.desc()",
+    )
 
 
 class Evidence(Base):
@@ -103,6 +108,18 @@ class Setting(Base):
     key: Mapped[str] = mapped_column(String(128), primary_key=True)
     value_json: Mapped[object] = mapped_column(JSON)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
+
+
+class FindingNote(Base):
+    __tablename__ = "finding_notes"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    finding_id: Mapped[str] = mapped_column(ForeignKey("findings.id"), index=True)
+    author: Mapped[str] = mapped_column(String(128), default="local-analyst")
+    note_text: Mapped[str] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, index=True)
+
+    finding: Mapped["Finding"] = relationship(back_populates="notes")
 
 
 class DemoMarker(Base):

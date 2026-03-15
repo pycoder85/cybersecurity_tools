@@ -103,3 +103,17 @@ def test_export_api_routes_and_buttons(tmp_path):
     export_scans_response = export_scans_route.endpoint(format="csv", status="completed", os_family="linux")
     assert export_scans_response.status_code == 200
     assert b"summary_json" in export_scans_response.body
+
+
+def test_findings_page_renders_workflow_ui(tmp_path):
+    config = build_test_config(tmp_path)
+    seed_demo_data(config)
+    app = create_app(config)
+
+    findings_route = route_for(app, "/findings")
+    response = findings_route.endpoint(build_request(app, "/findings"))
+
+    assert response.status_code == 200
+    assert b"Status workflow" in response.body
+    assert b"Analyst notes" in response.body
+    assert b"Save status" in response.body

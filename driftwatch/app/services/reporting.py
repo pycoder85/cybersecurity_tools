@@ -4,7 +4,7 @@ from collections import Counter
 from datetime import datetime
 
 from sqlalchemy import Select, desc, func, select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
 from driftwatch.app.models.entities import Evidence, Finding, Host, Scan
 
@@ -41,7 +41,7 @@ def finding_query(
     category: str | None = None,
     status: str | None = None,
 ) -> Select[tuple[Finding]]:
-    query = select(Finding).order_by(desc(Finding.timestamp))
+    query = select(Finding).options(selectinload(Finding.notes)).order_by(desc(Finding.timestamp))
     if severity:
         query = query.where(Finding.severity == severity)
     if category:

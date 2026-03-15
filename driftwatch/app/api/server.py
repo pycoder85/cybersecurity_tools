@@ -9,6 +9,7 @@ from fastapi.templating import Jinja2Templates
 
 from driftwatch.app.core.config import AppConfig
 from driftwatch.app.rules.engine import rule_coverage
+from driftwatch.app.services.casework import ALLOWED_FINDING_STATUSES, add_finding_note, update_finding_status
 from driftwatch.app.services.database import init_database, session_scope
 from driftwatch.app.services.exporting import filtered_findings, filtered_scans, render_export_payload
 from driftwatch.app.services.llm import get_explainer
@@ -62,6 +63,9 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
     @app.get("/findings", response_class=HTMLResponse)
     def findings(request: Request, severity: str | None = None, category: str | None = None, status: str | None = None):
         with session_scope(config.database_url) as session:
+            redirect_to = str(request.url.path)
+            if request.url.query:
+                redirect_to = f"{redirect_to}?{request.url.query}"
             context = {
                 "request": request,
                 "page": "findings",
@@ -70,6 +74,8 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
                 "category": category or "",
                 "status": status or "",
                 "categories": finding_categories(session),
+                "finding_statuses": sorted(ALLOWED_FINDING_STATUSES),
+                "redirect_to": redirect_to,
             }
             return templates.TemplateResponse(request, "findings.html", context)
 
@@ -159,6 +165,37 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
             explanation = explainer.explain(finding)
             finding.explanation = explanation
             return {"finding_id": finding.id, "explanation": explanation, "provider": getattr(explainer, "provider", "none")}
+
+    @app.post("/api/findings/{finding_id}/status")
+    def set_finding_status(
+        finding_id: str,
+        status: str = Form(...),
+        redirect_to: str = Form("/findings"),
+    ):
+        with session_scope(config.database_url) as session:
+            try:
+                finding = update_finding_status(session, finding_id, status)
+            except ValueError as exc:
+                return JSONResponse({"error": str(exc)}, status_code=400)
+            if finding is None:
+                return JSONResponse({"error": "finding not found"}, status_code=404)
+        return RedirectResponse(url=redirect_to or "/findings", status_code=303)
+
+    @app.post("/api/findings/{finding_id}/notes")
+    def create_finding_note(
+        finding_id: str,
+        note_text: str = Form(...),
+        author: str = Form("local-analyst"),
+        redirect_to: str = Form("/findings"),
+    ):
+        with session_scope(config.database_url) as session:
+            try:
+                note = add_finding_note(session, finding_id, note_text=note_text, author=author)
+            except ValueError as exc:
+                return JSONResponse({"error": str(exc)}, status_code=400)
+            if note is None:
+                return JSONResponse({"error": "finding not found"}, status_code=404)
+        return RedirectResponse(url=redirect_to or "/findings", status_code=303)
 
     @app.get("/api/summary")
     def summary():

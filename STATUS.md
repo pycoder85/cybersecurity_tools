@@ -7,6 +7,7 @@ Driftwatch is at MVP stage and runs end-to-end locally:
 - CLI commands exist for scan, serve, baseline create/diff, and demo data
 - CLI export commands exist for findings and scans in JSON or CSV
 - Export filters exist for findings and scans, and the dashboard now exposes download buttons
+- Findings support analyst notes and status transitions in the dashboard
 - FastAPI dashboard is working with Jinja templates and dark-theme styling
 - SQLite persistence is implemented for hosts, scans, findings, evidence, baselines, and settings
 - Deterministic rules are implemented for process, network, persistence, filesystem, and baseline drift coverage
@@ -59,6 +60,8 @@ driftwatch serve --scan-on-start
   - filters by severity, category, status
   - evidence details
   - explain-this-finding button with deterministic stubbed enrichment
+  - status workflow for open, investigating, resolved
+  - analyst note creation and note history
   - download buttons for filtered JSON and CSV export
 - Scan history page
   - filters by status and OS family
@@ -89,6 +92,7 @@ driftwatch serve --scan-on-start
 - Export/report packaging is not implemented yet
 - Export exists for findings and scans, but filtering and bundled report generation are not implemented yet
 - Export filtering exists, but bundled evidence/report packaging is not implemented yet
+- Analyst notes exist, but there is no per-user auth or audit-trail model yet
 - No migration system exists yet; schema is created via SQLAlchemy metadata
 - Binding to `0.0.0.0` works, but remote exposure is less safe than localhost-only use
 
@@ -104,11 +108,11 @@ Short-term release polish:
 
 Next product improvements:
 
-1. Add analyst notes and richer finding status transitions.
-2. Improve deduplication across repeated scans.
-3. Expand Windows and macOS collectors.
-4. Add packaged release artifacts.
-5. Add richer export/report bundles with filters and snapshots.
+1. Improve deduplication across repeated scans.
+2. Expand Windows and macOS collectors.
+3. Add packaged release artifacts.
+4. Add richer export/report bundles with filters and snapshots.
+5. Add per-user analyst identity and audit history for notes/status changes.
 
 ## Resume checklist
 

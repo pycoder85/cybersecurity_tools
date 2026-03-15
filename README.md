@@ -23,10 +23,10 @@ This project is intentionally defensive in scope:
 
 ## Repo preview
 
-Live UI preview is available with `driftwatch serve --demo-data`. The repo also includes lightweight preview illustrations for GitHub:
+Live UI preview is available with `driftwatch serve --demo-data`. The repo now includes actual dashboard screenshots:
 
-![Driftwatch overview preview](docs/assets/driftwatch-overview-preview.svg)
-![Driftwatch findings preview](docs/assets/driftwatch-findings-preview.svg)
+![Driftwatch overview preview](driftwatch-overview-preview.png)
+![Driftwatch findings preview](driftwatch-findings-preview.png)
 
 ## Project structure
 
@@ -120,7 +120,7 @@ The findings export supports `--severity`, `--category`, and `--status`. The sca
 ## Dashboard pages
 
 - Overview: totals, severity counts, latest scan, host context, severity graph, and recent scan trend graph
-- Findings: filter by severity, category, and status
+- Findings: filter by severity, category, and status; analyst notes; and status workflow
 - Scan history: timestamped runs with summaries, trend graph, and severity composition bars
 - Evidence: raw collector and finding evidence
 - Settings: scan paths, exclusions, schedule, optional LLM placeholders
@@ -180,6 +180,14 @@ Planned providers:
 - local model backend
 - API-backed provider
 
+## Analyst workflow
+
+Driftwatch now supports lightweight local analyst workflow directly in the findings view:
+
+- change finding status between `open`, `investigating`, and `resolved`
+- add analyst notes to preserve triage context
+- keep notes and status local in SQLite with the rest of the host evidence
+
 ## Testing
 
 ```bash
@@ -188,7 +196,16 @@ pytest
 
 ## Screenshots / preview
 
-This MVP ships with seeded demo data instead of static screenshots so the dashboard can be previewed immediately on any host.
+The repository includes real screenshot previews in the project root:
+
+- `driftwatch-overview-preview.png`
+- `driftwatch-findings-preview.png`
+
+You can also generate a live local preview immediately with:
+
+```bash
+driftwatch serve --demo-data
+```
 
 ## Future hardening TODOs
 

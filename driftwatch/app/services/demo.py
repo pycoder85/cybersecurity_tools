@@ -4,7 +4,7 @@ from datetime import timedelta
 
 from driftwatch.app.core.config import AppConfig
 from driftwatch.app.core.utils import utcnow
-from driftwatch.app.models.entities import Evidence, Finding, Host, Scan
+from driftwatch.app.models.entities import Evidence, Finding, FindingNote, Host, Scan
 from driftwatch.app.services.database import init_database, session_scope
 
 
@@ -71,3 +71,11 @@ def seed_demo_data(config: AppConfig) -> None:
                     payload_json=finding.evidence_json,
                 )
             )
+            if index == 1:
+                session.add(
+                    FindingNote(
+                        finding_id=finding.id,
+                        author="demo-analyst",
+                        note_text="Demo analyst note: validate whether this path belongs to an approved test artifact.",
+                    )
+                )
