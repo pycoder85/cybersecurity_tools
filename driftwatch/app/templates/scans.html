@@ -1,0 +1,131 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="hero">
+  <div>
+    <p class="eyebrow">Timeline</p>
+    <h2>Scan history</h2>
+  </div>
+</section>
+
+<section class="card">
+  <form class="filters" method="get">
+    <label>
+      Status
+      <select name="status">
+        <option value="">All</option>
+        {% for option in scan_statuses %}
+        <option value="{{ option }}" {% if status == option %}selected{% endif %}>{{ option }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>
+      OS family
+      <select name="os_family">
+        <option value="">All</option>
+        {% for option in scan_os_families %}
+        <option value="{{ option }}" {% if os_family == option %}selected{% endif %}>{{ option }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <button type="submit">Apply filters</button>
+  </form>
+  <div class="toolbar">
+    <a class="button-link" href="/api/export/scans?format=json{% if status %}&status={{ status | urlencode }}{% endif %}{% if os_family %}&os_family={{ os_family | urlencode }}{% endif %}">Download JSON</a>
+    <a class="button-link" href="/api/export/scans?format=csv{% if status %}&status={{ status | urlencode }}{% endif %}{% if os_family %}&os_family={{ os_family | urlencode }}{% endif %}">Download CSV</a>
+  </div>
+</section>
+
+<section class="grid columns-2">
+  <article class="card">
+    <div class="chart-head">
+      <div>
+        <h3>Findings over time</h3>
+        <p class="subtle">Trend across the most recent scan runs.</p>
+      </div>
+      <strong>{% if scan_max_total %}Peak {{ scan_max_total }}{% else %}No scans{% endif %}</strong>
+    </div>
+    {% if scan_activity %}
+    <div class="line-chart">
+      <svg viewBox="0 0 560 180" role="img" aria-label="Scan history findings trend">
+        <polyline class="chart-grid" points="16,164 544,164"></polyline>
+        <polyline class="chart-grid faint" points="16,98 544,98"></polyline>
+        <polyline class="chart-grid faint" points="16,32 544,32"></polyline>
+        <polyline class="chart-line" points="{{ scan_line_points }}"></polyline>
+        {% for item in scan_activity %}
+        {% set x = 16 + ((528 / ((scan_activity|length - 1) if scan_activity|length > 1 else 1)) * loop.index0) %}
+        {% set y = 164 - ((132 * item.total_findings / (scan_max_total if scan_max_total else 1))) %}
+        <circle cx="{{ '%.1f'|format(x) }}" cy="{{ '%.1f'|format(y) }}" r="4" class="chart-dot"></circle>
+        {% endfor %}
+      </svg>
+      <div class="chart-labels">
+        {% for item in scan_activity %}
+        <div>
+          <strong>{{ item.total_findings }}</strong>
+          <span>{{ item.label }}</span>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% else %}
+    <p class="subtle">No scans recorded yet.</p>
+    {% endif %}
+  </article>
+  <article class="card">
+    <div class="chart-head">
+      <div>
+        <h3>Severity composition</h3>
+        <p class="subtle">Stacked bars for each recent scan.</p>
+      </div>
+    </div>
+    {% if scan_activity %}
+    <div class="scan-bars">
+      {% for item in scan_activity %}
+      <div class="scan-bar-column">
+        <div class="stacked-bar">
+          {% for severity in ["critical", "high", "medium", "low", "info"] %}
+          {% set value = item.severity_counts[severity] %}
+          {% if item.total_findings > 0 and value > 0 %}
+          <span class="stack-segment {{ severity }}" style="height: {{ (value / item.total_findings) * 100 }}%"></span>
+          {% endif %}
+          {% endfor %}
+        </div>
+        <strong>{{ item.total_findings }}</strong>
+        <span>{{ item.label }}</span>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <p class="subtle">Run more scans to populate the graph.</p>
+    {% endif %}
+  </article>
+</section>
+
+<section class="card">
+  <table class="table">
+    <thead>
+      <tr>
+        <th>Scan ID</th>
+        <th>Started</th>
+        <th>Status</th>
+        <th>OS</th>
+        <th>Summary</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for scan in scans %}
+      <tr>
+        <td>{{ scan.id }}</td>
+        <td>{{ scan.started_at }}</td>
+        <td>{{ scan.status }}</td>
+        <td>{{ scan.os_family }}</td>
+        <td><pre>{{ scan.summary_json | tojson(indent=2) }}</pre></td>
+      </tr>
+      {% else %}
+      <tr>
+        <td colspan="5">No scans recorded yet.</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endblock %}

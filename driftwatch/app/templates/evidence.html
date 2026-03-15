@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="hero">
+  <div>
+    <p class="eyebrow">Collector output</p>
+    <h2>Evidence</h2>
+  </div>
+</section>
+
+<section class="evidence-list">
+  {% for item in evidence %}
+  <article class="card">
+    <div class="finding-header">
+      <div>
+        <h3>{{ item.collector_name }}</h3>
+        <p class="subtle">{{ item.record_type }}</p>
+      </div>
+      <small>{{ item.created_at }}</small>
+    </div>
+    <pre>{{ item.payload_json | tojson(indent=2) }}</pre>
+  </article>
+  {% else %}
+  <article class="card">
+    <p class="subtle">No evidence stored yet.</p>
+  </article>
+  {% endfor %}
+</section>
+{% endblock %}

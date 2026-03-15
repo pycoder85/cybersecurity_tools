@@ -1,0 +1,139 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="hero">
+  <div>
+    <p class="eyebrow">Endpoint visibility</p>
+    <h2>Host overview</h2>
+    <p class="subtle">Deterministic findings, local evidence, and recent scan context.</p>
+  </div>
+  <div class="hero-note">
+    <span class="badge neutral">localhost only</span>
+    <span class="badge info">response disabled by default</span>
+  </div>
+</section>
+
+<section class="grid stats">
+  <article class="card stat">
+    <h3>Total findings</h3>
+    <strong>{{ counts.total or 0 }}</strong>
+  </article>
+  <article class="card stat">
+    <h3>Critical / High</h3>
+    <strong>{{ counts.critical or 0 }} / {{ counts.high or 0 }}</strong>
+  </article>
+  <article class="card stat">
+    <h3>Latest scan</h3>
+    <strong>{% if latest_scan %}{{ latest_scan.started_at }}{% else %}No scans yet{% endif %}</strong>
+  </article>
+  <article class="card stat">
+    <h3>Host</h3>
+    <strong>{% if host %}{{ host.hostname }}{% else %}Unknown{% endif %}</strong>
+  </article>
+</section>
+
+<section class="grid columns-2">
+  <article class="card">
+    <h3>Severity distribution</h3>
+    <div class="severity-stack">
+      {% for item in severity_chart %}
+      <div class="meter-row">
+        <div class="meter-label">
+          <span class="badge {{ item.severity }}">{{ item.severity }}</span>
+          <strong>{{ item.count }}</strong>
+          <small>{{ item.percent }}%</small>
+        </div>
+        <div class="meter-track">
+          <span class="meter-fill {{ item.severity }}" style="width: {{ item.percent }}%"></span>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </article>
+  <article class="card">
+    <h3>Host context</h3>
+    {% if host %}
+    <dl class="facts">
+      <div><dt>Hostname</dt><dd>{{ host.hostname }}</dd></div>
+      <div><dt>OS family</dt><dd>{{ host.os_family }}</dd></div>
+      <div><dt>OS version</dt><dd>{{ host.os_version }}</dd></div>
+      <div><dt>Architecture</dt><dd>{{ host.architecture }}</dd></div>
+      <div><dt>Last seen</dt><dd>{{ host.last_seen_at }}</dd></div>
+    </dl>
+    {% else %}
+    <p class="subtle">Run `driftwatch scan` or seed demo data to populate this dashboard.</p>
+    {% endif %}
+  </article>
+</section>
+
+<section class="grid columns-2">
+  <article class="card">
+    <div class="chart-head">
+      <div>
+        <h3>Scan trend</h3>
+        <p class="subtle">Recent total findings across completed scans.</p>
+      </div>
+      <strong>{% if scan_max_total %}Peak {{ scan_max_total }}{% else %}No scans{% endif %}</strong>
+    </div>
+    {% if scan_activity %}
+    <div class="line-chart">
+      <svg viewBox="0 0 560 180" role="img" aria-label="Recent scan findings trend">
+        <polyline class="chart-grid" points="16,164 544,164"></polyline>
+        <polyline class="chart-grid faint" points="16,98 544,98"></polyline>
+        <polyline class="chart-grid faint" points="16,32 544,32"></polyline>
+        <polyline class="chart-line" points="{{ scan_line_points }}"></polyline>
+        {% for item in scan_activity %}
+        {% set x = 16 + ((528 / ((scan_activity|length - 1) if scan_activity|length > 1 else 1)) * loop.index0) %}
+        {% set y = 164 - ((132 * item.total_findings / (scan_max_total if scan_max_total else 1))) %}
+        <circle cx="{{ '%.1f'|format(x) }}" cy="{{ '%.1f'|format(y) }}" r="4" class="chart-dot"></circle>
+        {% endfor %}
+      </svg>
+      <div class="chart-labels">
+        {% for item in scan_activity %}
+        <div>
+          <strong>{{ item.total_findings }}</strong>
+          <span>{{ item.label }}</span>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% else %}
+    <p class="subtle">Run multiple scans to build a findings trend line.</p>
+    {% endif %}
+  </article>
+  <article class="card">
+    <div class="chart-head">
+      <div>
+        <h3>Recent scan mix</h3>
+        <p class="subtle">Severity composition for the latest scans.</p>
+      </div>
+    </div>
+    {% if scan_activity %}
+    <div class="scan-bars">
+      {% for item in scan_activity %}
+      <div class="scan-bar-column">
+        <div class="stacked-bar">
+          {% for severity in ["critical", "high", "medium", "low", "info"] %}
+          {% set value = item.severity_counts[severity] %}
+          {% if item.total_findings > 0 and value > 0 %}
+          <span class="stack-segment {{ severity }}" style="height: {{ (value / item.total_findings) * 100 }}%"></span>
+          {% endif %}
+          {% endfor %}
+        </div>
+        <strong>{{ item.total_findings }}</strong>
+        <span>{{ item.label }}</span>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <p class="subtle">No completed scans available for a severity mix graph yet.</p>
+    {% endif %}
+  </article>
+</section>
+
+{% if latest_scan %}
+<section class="card">
+  <h3>Latest scan summary</h3>
+  <pre>{{ latest_scan.summary_json | tojson(indent=2) }}</pre>
+</section>
+{% endif %}
+{% endblock %}

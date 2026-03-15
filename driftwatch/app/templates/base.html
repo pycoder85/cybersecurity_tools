@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Driftwatch</title>
+    <link rel="stylesheet" href="/static/styles.css" />
+    <script defer src="/static/app.js"></script>
+  </head>
+  <body>
+    <div class="shell">
+      <aside class="sidebar">
+        <div class="brand">
+          <span class="brand-mark">SD</span>
+          <div>
+            <h1>Driftwatch</h1>
+            <p>Local host auditing</p>
+          </div>
+        </div>
+        <nav class="nav">
+          <a class="{% if page == 'overview' %}active{% endif %}" href="/">Overview</a>
+          <a class="{% if page == 'findings' %}active{% endif %}" href="/findings">Findings</a>
+          <a class="{% if page == 'scans' %}active{% endif %}" href="/scans">Scan History</a>
+          <a class="{% if page == 'evidence' %}active{% endif %}" href="/evidence">Evidence</a>
+          <a class="{% if page == 'settings' %}active{% endif %}" href="/settings">Settings</a>
+          <a class="{% if page == 'coverage' %}active{% endif %}" href="/coverage">Rule Coverage</a>
+        </nav>
+        <div class="sidebar-foot">
+          <p>Defensive scope only</p>
+          <small>No destructive actions enabled</small>
+        </div>
+      </aside>
+      <main class="content">
+        {% block content %}{% endblock %}
+      </main>
+    </div>
+  </body>
+</html>

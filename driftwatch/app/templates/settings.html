@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="hero">
+  <div>
+    <p class="eyebrow">Local configuration</p>
+    <h2>Settings</h2>
+  </div>
+</section>
+
+{% if saved %}
+<section class="card flash success">Settings saved locally.</section>
+{% endif %}
+
+<section class="card">
+  <form class="settings-form" method="post">
+    <label>
+      Scan directories
+      <input type="text" name="scan_directories" value="{{ settings.scan_directories | join(', ') }}" />
+    </label>
+    <label>
+      Scan exclusions
+      <input type="text" name="scan_exclusions" value="{{ settings.scan_exclusions | join(', ') }}" />
+    </label>
+    <label>
+      Schedule interval (minutes)
+      <input type="number" min="0" name="schedule_interval_minutes" value="{{ settings.schedule_interval_minutes }}" />
+    </label>
+    <label>
+      LLM provider
+      <select name="llm_provider">
+        {% for option in ["none", "local", "api"] %}
+        <option value="{{ option }}" {% if settings.llm_provider == option %}selected{% endif %}>{{ option }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>
+      LLM model
+      <input type="text" name="llm_model" value="{{ settings.llm_model }}" placeholder="optional" />
+    </label>
+    <button type="submit">Save settings</button>
+  </form>
+</section>
+
+<section class="grid columns-2">
+  <article class="card">
+    <h3>Schedule behavior</h3>
+    <p class="subtle">When the interval is above zero, the local dashboard process schedules future scans in the background.</p>
+  </article>
+  <article class="card">
+    <h3>Response safety</h3>
+    <p class="subtle">Quarantine and containment actions are suggestions only in this MVP. Destructive actions stay disabled by default.</p>
+  </article>
+</section>
+{% endblock %}

@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="hero">
+  <div>
+    <p class="eyebrow">Implementation inventory</p>
+    <h2>Rule coverage</h2>
+  </div>
+</section>
+
+<section class="grid columns-3">
+  {% for os_family, rules in coverage.items() %}
+  <article class="card">
+    <h3>{{ os_family }}</h3>
+    <div class="coverage-list">
+      {% for rule in rules %}
+      <div class="coverage-item">
+        <span class="badge {{ rule.severity_hint }}">{{ rule.severity_hint }}</span>
+        <strong>{{ rule.name }}</strong>
+        <p class="subtle">{{ rule.category }}</p>
+        <p>{{ rule.description }}</p>
+      </div>
+      {% endfor %}
+    </div>
+  </article>
+  {% endfor %}
+</section>
+{% endblock %}

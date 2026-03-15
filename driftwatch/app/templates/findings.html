@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="hero">
+  <div>
+    <p class="eyebrow">Analyst queue</p>
+    <h2>Findings</h2>
+  </div>
+</section>
+
+<section class="card">
+  <form class="filters" method="get">
+    <label>
+      Severity
+      <select name="severity">
+        <option value="">All</option>
+        {% for level in ["critical", "high", "medium", "low", "info"] %}
+        <option value="{{ level }}" {% if severity == level %}selected{% endif %}>{{ level }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>
+      Category
+      <select name="category">
+        <option value="">All</option>
+        {% for option in categories %}
+        <option value="{{ option }}" {% if category == option %}selected{% endif %}>{{ option }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>
+      Status
+      <select name="status">
+        <option value="">All</option>
+        {% for option in ["open", "investigating", "resolved"] %}
+        <option value="{{ option }}" {% if status == option %}selected{% endif %}>{{ option }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <button type="submit">Apply filters</button>
+  </form>
+  <div class="toolbar">
+    <a class="button-link" href="/api/export/findings?format=json{% if severity %}&severity={{ severity | urlencode }}{% endif %}{% if category %}&category={{ category | urlencode }}{% endif %}{% if status %}&status={{ status | urlencode }}{% endif %}">Download JSON</a>
+    <a class="button-link" href="/api/export/findings?format=csv{% if severity %}&severity={{ severity | urlencode }}{% endif %}{% if category %}&category={{ category | urlencode }}{% endif %}{% if status %}&status={{ status | urlencode }}{% endif %}">Download CSV</a>
+  </div>
+</section>
+
+<section class="findings-list">
+  {% for finding in findings %}
+  <article class="card finding-card">
+    <div class="finding-header">
+      <div>
+        <div class="finding-meta">
+          <span class="badge {{ finding.severity }}">{{ finding.severity }}</span>
+          <span class="muted">{{ finding.category }}</span>
+          <span class="muted">{{ finding.status }}</span>
+        </div>
+        <h3>{{ finding.title }}</h3>
+      </div>
+      <div class="finding-rule">
+        <span>{{ finding.rule_name }}</span>
+        <small>{{ finding.timestamp }}</small>
+      </div>
+    </div>
+    <p>{{ finding.description }}</p>
+    <div class="note">
+      <strong>Safe suggestion:</strong> {{ finding.suggested_action }}
+    </div>
+    <details>
+      <summary>Evidence</summary>
+      <pre>{{ finding.evidence_json | tojson(indent=2) }}</pre>
+    </details>
+    <div class="finding-actions">
+      <button class="explain-button" type="button" data-finding-id="{{ finding.id }}">Explain this finding</button>
+      <span id="explanation-{{ finding.id }}" class="explanation">
+        {% if finding.explanation %}{{ finding.explanation }}{% else %}No enrichment saved yet.{% endif %}
+      </span>
+    </div>
+  </article>
+  {% else %}
+  <article class="card">
+    <p class="subtle">No findings match the current filters.</p>
+  </article>
+  {% endfor %}
+</section>
+{% endblock %}
