@@ -7,6 +7,43 @@
   </div>
 </section>
 
+<section class="card">
+  <form class="filters" method="get">
+    <label>
+      Collector
+      <select name="collector_name">
+        <option value="">All</option>
+        {% for option in collector_options %}
+        <option value="{{ option }}" {% if collector_name == option %}selected{% endif %}>{{ option }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>
+      Record type
+      <select name="record_type">
+        <option value="">All</option>
+        {% for option in record_type_options %}
+        <option value="{{ option }}" {% if record_type == option %}selected{% endif %}>{{ option }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>
+      Scan ID
+      <input type="text" name="scan_id" value="{{ scan_id }}" placeholder="optional" />
+    </label>
+    <label>
+      Finding ID
+      <input type="text" name="finding_id" value="{{ finding_id }}" placeholder="optional" />
+    </label>
+    <button type="submit">Apply filters</button>
+  </form>
+  <div class="toolbar">
+    <a class="button-link" href="/api/export/evidence?format=json{% if collector_name %}&collector_name={{ collector_name | urlencode }}{% endif %}{% if record_type %}&record_type={{ record_type | urlencode }}{% endif %}{% if scan_id %}&scan_id={{ scan_id | urlencode }}{% endif %}{% if finding_id %}&finding_id={{ finding_id | urlencode }}{% endif %}">Download JSON</a>
+    <a class="button-link" href="/api/export/evidence?format=csv{% if collector_name %}&collector_name={{ collector_name | urlencode }}{% endif %}{% if record_type %}&record_type={{ record_type | urlencode }}{% endif %}{% if scan_id %}&scan_id={{ scan_id | urlencode }}{% endif %}{% if finding_id %}&finding_id={{ finding_id | urlencode }}{% endif %}">Download CSV</a>
+    <a class="button-link" href="/api/export/snapshot?page=evidence{% if collector_name %}&collector_name={{ collector_name | urlencode }}{% endif %}{% if record_type %}&record_type={{ record_type | urlencode }}{% endif %}{% if scan_id %}&scan_id={{ scan_id | urlencode }}{% endif %}{% if finding_id %}&finding_id={{ finding_id | urlencode }}{% endif %}">Download snapshot</a>
+  </div>
+</section>
+
 <section class="evidence-list">
   {% for item in evidence %}
   <article class="card">

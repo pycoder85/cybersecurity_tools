@@ -37,6 +37,18 @@
       LLM model
       <input type="text" name="llm_model" value="{{ settings.llm_model }}" placeholder="optional" />
     </label>
+    <label>
+      Enrichment provider
+      <select name="enrichment_provider">
+        {% for option in ["none", "threatfox", "virustotal", "nvd_kev"] %}
+        <option value="{{ option }}" {% if settings.enrichment_provider == option %}selected{% endif %}>{{ option }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>
+      Enrichment API key
+      <input type="password" name="enrichment_api_key" value="{{ settings.enrichment_api_key }}" placeholder="optional" />
+    </label>
     <button type="submit">Save settings</button>
   </form>
 </section>
@@ -49,6 +61,10 @@
   <article class="card">
     <h3>Response safety</h3>
     <p class="subtle">Quarantine and containment actions are suggestions only in this MVP. Destructive actions stay disabled by default.</p>
+  </article>
+  <article class="card">
+    <h3>External validation</h3>
+    <p class="subtle">External enrichment is opt-in. IOC providers send IPs, domains, URLs, and hashes; the NVD/KEV provider sends software names and versions for vulnerability matching.</p>
   </article>
 </section>
 {% endblock %}

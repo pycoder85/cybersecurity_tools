@@ -31,4 +31,6 @@ def update_settings_from_form(session: Session, form_data: dict[str, str]) -> No
     upsert_setting(session, "schedule_interval_minutes", int(form_data.get("schedule_interval_minutes") or 0))
     upsert_setting(session, "llm_provider", form_data.get("llm_provider") or "none")
     upsert_setting(session, "llm_model", form_data.get("llm_model") or "")
+    upsert_setting(session, "enrichment_provider", form_data.get("enrichment_provider") or "none")
+    upsert_setting(session, "enrichment_api_key", form_data.get("enrichment_api_key") or "")
     upsert_setting(session, "response_actions_enabled", False)

@@ -6,6 +6,7 @@ from datetime import datetime
 from sqlalchemy import Select, desc, func, select
 from sqlalchemy.orm import Session, selectinload
 
+from driftwatch.app.core.utils import stable_hash
 from driftwatch.app.models.entities import Evidence, Finding, Host, Scan
 
 
@@ -57,7 +58,9 @@ def list_findings(
     category: str | None = None,
     status: str | None = None,
 ) -> list[Finding]:
-    return session.execute(finding_query(severity, category, status)).scalars().all()
+    findings = session.execute(finding_query(severity, category, status)).scalars().all()
+    attach_finding_recurrence(session, findings)
+    return findings
 
 
 def list_scans(session: Session) -> list[Scan]:
@@ -81,8 +84,65 @@ def list_scans_filtered(
     return session.execute(scan_query(status, os_family)).scalars().all()
 
 
-def list_evidence(session: Session) -> list[Evidence]:
-    return session.execute(select(Evidence).order_by(desc(Evidence.created_at)).limit(250)).scalars().all()
+def evidence_query(
+    collector_name: str | None = None,
+    record_type: str | None = None,
+    scan_id: str | None = None,
+    finding_id: str | None = None,
+) -> Select[tuple[Evidence]]:
+    query = select(Evidence).order_by(desc(Evidence.created_at))
+    if collector_name:
+        query = query.where(Evidence.collector_name == collector_name)
+    if record_type:
+        query = query.where(Evidence.record_type == record_type)
+    if scan_id:
+        query = query.where(Evidence.scan_id == scan_id)
+    if finding_id:
+        query = query.where(Evidence.finding_id == finding_id)
+    return query
+
+
+def list_evidence(
+    session: Session,
+    collector_name: str | None = None,
+    record_type: str | None = None,
+    scan_id: str | None = None,
+    finding_id: str | None = None,
+    limit: int = 250,
+) -> list[Evidence]:
+    return session.execute(evidence_query(collector_name, record_type, scan_id, finding_id).limit(limit)).scalars().all()
+
+
+def evidence_collectors(session: Session) -> list[str]:
+    rows = session.execute(select(Evidence.collector_name).distinct().order_by(Evidence.collector_name)).all()
+    return [row[0] for row in rows if row[0]]
+
+
+def evidence_record_types(session: Session) -> list[str]:
+    rows = session.execute(select(Evidence.record_type).distinct().order_by(Evidence.record_type)).all()
+    return [row[0] for row in rows if row[0]]
+
+
+def latest_software_inventory(session: Session, name_filter: str | None = None) -> list[dict[str, object]]:
+    entry = session.execute(
+        select(Evidence)
+        .where(Evidence.collector_name == "software", Evidence.record_type == "collector_result")
+        .order_by(desc(Evidence.created_at))
+        .limit(1)
+    ).scalar_one_or_none()
+    if entry is None:
+        return []
+    records = list((entry.payload_json or {}).get("records", []))
+    if name_filter:
+        normalized = name_filter.strip().lower()
+        records = [record for record in records if normalized in str(record.get("name", "")).lower()]
+    return sorted(
+        records,
+        key=lambda record: (
+            str(record.get("name", "")).lower(),
+            str(record.get("version", "")).lower(),
+        ),
+    )
 
 
 def finding_categories(session: Session) -> list[str]:
@@ -158,3 +218,97 @@ def max_scan_total(series: list[dict[str, object]]) -> int:
     if not series:
         return 0
     return max(int(item["total_findings"]) for item in series)
+
+
+def recurrence_signature_parts(
+    host_id: str,
+    rule_name: str,
+    category: str,
+    title: str,
+    source_module: str,
+    os_family: str,
+    evidence_json: dict | None,
+) -> list[object]:
+    evidence_json = evidence_json or {}
+    evidence_focus = {
+        "path": evidence_json.get("path"),
+        "name": evidence_json.get("name"),
+        "command": evidence_json.get("command"),
+        "collector_name": evidence_json.get("collector_name"),
+        "baseline_type": evidence_json.get("baseline_type"),
+        "item_key": evidence_json.get("item_key"),
+        "raddr": evidence_json.get("raddr"),
+        "laddr": evidence_json.get("laddr"),
+    }
+    return [host_id, rule_name, category, title, source_module, os_family, evidence_focus]
+
+
+def recurrence_signature_for_finding(finding: Finding) -> str:
+    return stable_hash(
+        recurrence_signature_parts(
+            finding.host_id,
+            finding.rule_name,
+            finding.category,
+            finding.title,
+            finding.source_module,
+            finding.os_family,
+            finding.evidence_json,
+        )
+    )
+
+
+def attach_finding_recurrence(session: Session, findings: list[Finding]) -> None:
+    if not findings:
+        return
+    host_ids = sorted({finding.host_id for finding in findings})
+    rows = session.execute(
+        select(
+            Finding.id,
+            Finding.host_id,
+            Finding.rule_name,
+            Finding.category,
+            Finding.title,
+            Finding.source_module,
+            Finding.os_family,
+            Finding.evidence_json,
+            Finding.timestamp,
+        ).where(Finding.host_id.in_(host_ids))
+    ).all()
+    grouped: dict[str, list[tuple[str, datetime | None]]] = {}
+    for row in rows:
+        signature = stable_hash(
+            recurrence_signature_parts(
+                row.host_id,
+                row.rule_name,
+                row.category,
+                row.title,
+                row.source_module,
+                row.os_family,
+                row.evidence_json,
+            )
+        )
+        grouped.setdefault(signature, []).append((row.id, row.timestamp))
+    index_maps: dict[str, dict[str, object]] = {}
+    for signature, entries in grouped.items():
+        ordered = sorted(entries, key=lambda item: (item[1] or datetime.min, item[0]))
+        first_seen = ordered[0][1] if ordered else None
+        for index, (finding_id, timestamp) in enumerate(ordered):
+            index_maps[finding_id] = {
+                "occurrence_count": len(ordered),
+                "occurrence_index": index + 1,
+                "first_seen_at": first_seen,
+                "previous_seen_at": ordered[index - 1][1] if index > 0 else None,
+                "seen_before": index > 0,
+                "repeat_count": index,
+                "is_recurring": len(ordered) > 1,
+            }
+    for finding in findings:
+        recurrence = index_maps.get(finding.id, {})
+        finding.recurrence_signature = recurrence_signature_for_finding(finding)
+        finding.occurrence_count = int(recurrence.get("occurrence_count", 1))
+        finding.occurrence_index = int(recurrence.get("occurrence_index", 1))
+        finding.first_seen_at = recurrence.get("first_seen_at", finding.timestamp)
+        finding.previous_seen_at = recurrence.get("previous_seen_at")
+        finding.seen_before = bool(recurrence.get("seen_before", False))
+        finding.repeat_count = int(recurrence.get("repeat_count", 0))
+        finding.is_recurring = bool(recurrence.get("is_recurring", False))

@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import csv
+import shutil
+import subprocess
 from pathlib import Path
 
 from driftwatch.app.collectors.base import BaseCollector, CollectorResult
@@ -73,3 +76,83 @@ class LinuxPersistenceCollector(BaseCollector):
                     }
                 )
         return CollectorResult(name=self.name, records=records, metadata={"count": len(records)})
+
+
+class LinuxSoftwareCollector(BaseCollector):
+    name = "software"
+
+    def collect(self, config: AppConfig, settings: dict[str, object]) -> CollectorResult:
+        records = self._collect_dpkg() or self._collect_rpm()
+        return CollectorResult(name=self.name, records=records, metadata={"count": len(records)})
+
+    def _collect_dpkg(self) -> list[dict]:
+        binary = shutil.which("dpkg-query")
+        if not binary:
+            return []
+        try:
+            output = subprocess.check_output(
+                [binary, "-W", "-f=${Package}\t${Version}\t${Architecture}\t${Maintainer}\n"],
+                text=True,
+                stderr=subprocess.DEVNULL,
+                timeout=15,
+            )
+        except (FileNotFoundError, subprocess.SubprocessError):
+            return []
+        records: list[dict] = []
+        reader = csv.reader(output.splitlines(), delimiter="\t")
+        for row in reader:
+            if not row or not row[0].strip():
+                continue
+            name = row[0].strip()
+            version = row[1].strip() if len(row) > 1 else ""
+            architecture = row[2].strip() if len(row) > 2 else ""
+            publisher = row[3].strip() if len(row) > 3 else ""
+            records.append(
+                {
+                    "name": name,
+                    "version": version,
+                    "architecture": architecture,
+                    "publisher": publisher,
+                    "install_location": "",
+                    "package_manager": "dpkg",
+                    "source": "linux.software",
+                    "hash": stable_hash([name, version, architecture, publisher]),
+                }
+            )
+        return records
+
+    def _collect_rpm(self) -> list[dict]:
+        binary = shutil.which("rpm")
+        if not binary:
+            return []
+        try:
+            output = subprocess.check_output(
+                [binary, "-qa", "--qf", "%{NAME}\t%{VERSION}-%{RELEASE}\t%{ARCH}\t%{VENDOR}\n"],
+                text=True,
+                stderr=subprocess.DEVNULL,
+                timeout=15,
+            )
+        except (FileNotFoundError, subprocess.SubprocessError):
+            return []
+        records: list[dict] = []
+        reader = csv.reader(output.splitlines(), delimiter="\t")
+        for row in reader:
+            if not row or not row[0].strip():
+                continue
+            name = row[0].strip()
+            version = row[1].strip() if len(row) > 1 else ""
+            architecture = row[2].strip() if len(row) > 2 else ""
+            publisher = row[3].strip() if len(row) > 3 else ""
+            records.append(
+                {
+                    "name": name,
+                    "version": version,
+                    "architecture": architecture,
+                    "publisher": publisher,
+                    "install_location": "",
+                    "package_manager": "rpm",
+                    "source": "linux.software",
+                    "hash": stable_hash([name, version, architecture, publisher]),
+                }
+            )
+        return records

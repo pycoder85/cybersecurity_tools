@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import subprocess
 from pathlib import Path
 
@@ -74,3 +75,51 @@ class MacOSPersistenceCollector(BaseCollector):
             }
             for name in names
         ]
+
+
+class MacOSSoftwareCollector(BaseCollector):
+    name = "software"
+
+    def collect(self, config: AppConfig, settings: dict[str, object]) -> CollectorResult:
+        records = self._applications()
+        return CollectorResult(name=self.name, records=records, metadata={"count": len(records)})
+
+    def _applications(self) -> list[dict]:
+        try:
+            output = subprocess.check_output(
+                ["system_profiler", "SPApplicationsDataType", "-json"],
+                text=True,
+                stderr=subprocess.DEVNULL,
+                timeout=30,
+            )
+        except (FileNotFoundError, subprocess.SubprocessError):
+            return []
+        try:
+            payload = json.loads(output)
+        except json.JSONDecodeError:
+            return []
+        records: list[dict] = []
+        for item in payload.get("SPApplicationsDataType", []):
+            name = str(item.get("_name") or "").strip()
+            if not name:
+                continue
+            version = str(item.get("version") or "").strip()
+            path = str(item.get("path") or "").strip()
+            obtained_from = str(item.get("obtained_from") or "").strip()
+            publisher = str(item.get("signed_by") or "").strip()
+            if isinstance(item.get("signed_by"), list):
+                publisher = ", ".join(str(entry).strip() for entry in item.get("signed_by", []) if str(entry).strip())
+            records.append(
+                {
+                    "name": name,
+                    "version": version,
+                    "publisher": publisher,
+                    "architecture": str(item.get("arch_kind") or "").strip(),
+                    "install_location": path,
+                    "obtained_from": obtained_from,
+                    "package_manager": "system_profiler",
+                    "source": "macos.software",
+                    "hash": stable_hash([name, version, publisher, path]),
+                }
+            )
+        return records

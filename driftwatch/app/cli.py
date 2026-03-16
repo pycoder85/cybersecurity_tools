@@ -42,7 +42,12 @@ def _cmd_serve(args: argparse.Namespace, config: AppConfig) -> int:
     scheduler = ScanScheduler(config)
     scheduler.start()
     try:
-        uvicorn.run(create_app(config), host=args.host, port=args.port, log_level="info")
+        uvicorn.run(
+            create_app(config),
+            host=args.host or config.dashboard_host,
+            port=args.port or config.dashboard_port,
+            log_level="info",
+        )
     finally:
         scheduler.stop()
     return 0
@@ -85,7 +90,7 @@ def _cmd_demo_data(args: argparse.Namespace, config: AppConfig) -> int:
 
 
 def _cmd_export(args: argparse.Namespace, config: AppConfig) -> int:
-    from driftwatch.app.services.exporting import export_findings, export_scans
+    from driftwatch.app.services.exporting import export_evidence, export_findings, export_scans
 
     init_database(config.database_url)
     with session_scope(config.database_url) as session:
@@ -98,13 +103,23 @@ def _cmd_export(args: argparse.Namespace, config: AppConfig) -> int:
                 category=getattr(args, "category", None),
                 status=getattr(args, "status", None),
             )
-        else:
+        elif args.export_target == "scans":
             count = export_scans(
                 session,
                 args.output,
                 args.format,
                 status=getattr(args, "status", None),
                 os_family=getattr(args, "os_family", None),
+            )
+        else:
+            count = export_evidence(
+                session,
+                args.output,
+                args.format,
+                collector_name=getattr(args, "collector_name", None),
+                record_type=getattr(args, "record_type", None),
+                scan_id=getattr(args, "scan_id", None),
+                finding_id=getattr(args, "finding_id", None),
             )
     destination = args.output or "stdout"
     summary = json.dumps(
@@ -132,8 +147,8 @@ def build_parser() -> argparse.ArgumentParser:
     scan_parser.add_argument("--count", type=int, default=1, help="Number of scans to run when scheduling")
 
     serve_parser = subparsers.add_parser("serve", help="Run the local dashboard")
-    serve_parser.add_argument("--host", default="127.0.0.1")
-    serve_parser.add_argument("--port", type=int, default=8484)
+    serve_parser.add_argument("--host", default=None, help="Dashboard bind host; defaults to DRIFTWATCH_HOST or 127.0.0.1")
+    serve_parser.add_argument("--port", type=int, default=None, help="Dashboard port; defaults to DRIFTWATCH_PORT or 8484")
     serve_parser.add_argument("--scan-on-start", action="store_true")
     serve_parser.add_argument("--demo-data", action="store_true")
 
@@ -155,6 +170,13 @@ def build_parser() -> argparse.ArgumentParser:
     export_scans_parser.add_argument("--output", default=None, help="Output file path, or '-' for stdout")
     export_scans_parser.add_argument("--status", default=None, help="Filter scans by status")
     export_scans_parser.add_argument("--os-family", default=None, help="Filter scans by operating system family")
+    export_evidence_parser = export_subparsers.add_parser("evidence", help="Export evidence")
+    export_evidence_parser.add_argument("--format", choices=["json", "csv"], default="json")
+    export_evidence_parser.add_argument("--output", default=None, help="Output file path, or '-' for stdout")
+    export_evidence_parser.add_argument("--collector-name", default=None, help="Filter evidence by collector name")
+    export_evidence_parser.add_argument("--record-type", default=None, help="Filter evidence by record type")
+    export_evidence_parser.add_argument("--scan-id", default=None, help="Filter evidence by scan ID")
+    export_evidence_parser.add_argument("--finding-id", default=None, help="Filter evidence by finding ID")
 
     subparsers.add_parser("demo-data", help="Seed the local database with demo content")
     return parser

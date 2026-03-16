@@ -66,6 +66,8 @@ def default_settings() -> dict[str, object]:
         "schedule_interval_minutes": 0,
         "llm_provider": "none",
         "llm_model": "",
+        "enrichment_provider": "none",
+        "enrichment_api_key": "",
         "response_actions_enabled": False,
         "web_roots": ["/var/www"] if os_family == "linux" else [],
     }

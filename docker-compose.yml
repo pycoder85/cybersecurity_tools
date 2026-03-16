@@ -1,0 +1,15 @@
+services:
+  driftwatch:
+    build:
+      context: .
+    ports:
+      - "8484:8484"
+    environment:
+      DRIFTWATCH_HOME: /data
+      DRIFTWATCH_HOST: 0.0.0.0
+      DRIFTWATCH_PORT: 8484
+    volumes:
+      - driftwatch-data:/data
+
+volumes:
+  driftwatch-data:

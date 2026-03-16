@@ -12,3 +12,4 @@
 - Add richer export options including filters, evidence bundles, and signed reports.
 - Add dashboard-side evidence export and downloadable report snapshots.
 - Add per-user analyst identity, note attribution hardening, and status-change audit history.
+- Add stronger recurring-finding identity, merge controls, and per-rule suppression UX.

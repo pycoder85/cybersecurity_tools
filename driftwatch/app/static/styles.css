@@ -170,6 +170,10 @@ pre {
   box-shadow: var(--shadow);
 }
 
+.compact-card {
+  margin-bottom: 1rem;
+}
+
 .stat strong {
   display: block;
   margin-top: 0.8rem;
@@ -493,6 +497,22 @@ textarea {
   justify-content: space-between;
   gap: 1rem;
   align-items: flex-start;
+}
+
+.recurrence-strip {
+  display: flex;
+  gap: 0.9rem;
+  flex-wrap: wrap;
+  padding: 0.85rem 1rem;
+  border: 1px solid var(--line);
+  border-radius: 1rem;
+  background: rgba(109, 226, 192, 0.06);
+  color: var(--muted);
+}
+
+.recurrence-strip span {
+  display: inline-flex;
+  align-items: center;
 }
 
 .finding-rule {

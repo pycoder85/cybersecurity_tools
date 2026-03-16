@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 from datetime import timedelta
+from sqlalchemy import select
 
 from driftwatch.app.core.config import AppConfig
 from driftwatch.app.core.utils import utcnow
-from driftwatch.app.models.entities import Evidence, Finding, FindingNote, Host, Scan
+from driftwatch.app.models.entities import DemoMarker, Evidence, Finding, FindingNote, Host, Scan
 from driftwatch.app.services.database import init_database, session_scope
 
 
@@ -12,6 +13,9 @@ def seed_demo_data(config: AppConfig) -> None:
     init_database(config.database_url)
     now = utcnow()
     with session_scope(config.database_url) as session:
+        marker = session.execute(select(DemoMarker).where(DemoMarker.active.is_(True))).scalar_one_or_none()
+        if marker is not None:
+            return
         host = Host(
             hostname="lab-sample-01",
             os_family="linux",
@@ -41,18 +45,18 @@ def seed_demo_data(config: AppConfig) -> None:
             title = [
                 "Process executing from /tmp",
                 "Recent authorized_keys change",
-                "New systemd timer drift",
+                "Process executing from /tmp",
             ][(index - 1) % 3]
             finding = Finding(
                 host_id=host.id,
                 scan_id=scan.id,
                 timestamp=started_at,
-                category=["Suspicious processes", "Unauthorized key or startup file changes", "Baseline drift"][(index - 1) % 3],
+                category=["Suspicious processes", "Unauthorized key or startup file changes", "Suspicious processes"][(index - 1) % 3],
                 severity=list(counts.keys())[0],
                 title=title,
                 description="Demo finding for UI preview and local dashboard validation.",
                 evidence_json={"demo": True, "scan_index": index, "path": "/tmp/demo.bin"},
-                rule_name=["suspicious_temp_process", "recent_authorized_keys", "baseline_drift"][(index - 1) % 3],
+                rule_name=["suspicious_temp_process", "recent_authorized_keys", "suspicious_temp_process"][(index - 1) % 3],
                 source_module="demo.seed",
                 os_family="linux",
                 confidence="medium",
@@ -79,3 +83,4 @@ def seed_demo_data(config: AppConfig) -> None:
                         note_text="Demo analyst note: validate whether this path belongs to an approved test artifact.",
                     )
                 )
+        session.add(DemoMarker(active=True))

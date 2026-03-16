@@ -41,6 +41,7 @@
   <div class="toolbar">
     <a class="button-link" href="/api/export/findings?format=json{% if severity %}&severity={{ severity | urlencode }}{% endif %}{% if category %}&category={{ category | urlencode }}{% endif %}{% if status %}&status={{ status | urlencode }}{% endif %}">Download JSON</a>
     <a class="button-link" href="/api/export/findings?format=csv{% if severity %}&severity={{ severity | urlencode }}{% endif %}{% if category %}&category={{ category | urlencode }}{% endif %}{% if status %}&status={{ status | urlencode }}{% endif %}">Download CSV</a>
+    <a class="button-link" href="/api/export/snapshot?page=findings{% if severity %}&severity={{ severity | urlencode }}{% endif %}{% if category %}&category={{ category | urlencode }}{% endif %}{% if status %}&status={{ status | urlencode }}{% endif %}">Download snapshot</a>
   </div>
 </section>
 
@@ -53,6 +54,11 @@
           <span class="badge {{ finding.severity }}">{{ finding.severity }}</span>
           <span class="muted">{{ finding.category }}</span>
           <span class="muted">{{ finding.status }}</span>
+          {% if finding.seen_before %}
+          <span class="badge neutral">seen before {{ finding.repeat_count }}x</span>
+          {% elif finding.is_recurring %}
+          <span class="badge info">first sighting</span>
+          {% endif %}
         </div>
         <h3>{{ finding.title }}</h3>
       </div>
@@ -62,6 +68,19 @@
       </div>
     </div>
     <p>{{ finding.description }}</p>
+    <div class="recurrence-strip">
+      {% if finding.seen_before %}
+      <span>First seen: {{ finding.first_seen_at }}</span>
+      <span>Previous seen: {{ finding.previous_seen_at }}</span>
+      <span>Occurrence: {{ finding.occurrence_index }} of {{ finding.occurrence_count }}</span>
+      {% elif finding.is_recurring %}
+      <span>First seen: {{ finding.first_seen_at }}</span>
+      <span>Occurrence: {{ finding.occurrence_index }} of {{ finding.occurrence_count }}</span>
+      <span>This signature recurs across scans.</span>
+      {% else %}
+      <span>No matching prior finding signature in local history.</span>
+      {% endif %}
+    </div>
     <div class="note">
       <strong>Safe suggestion:</strong> {{ finding.suggested_action }}
     </div>
@@ -116,9 +135,11 @@
     </details>
     <div class="finding-actions">
       <button class="explain-button" type="button" data-finding-id="{{ finding.id }}">Explain this finding</button>
+      <button class="enrich-button" type="button" data-finding-id="{{ finding.id }}">Validate with feeds</button>
       <span id="explanation-{{ finding.id }}" class="explanation">
         {% if finding.explanation %}{{ finding.explanation }}{% else %}No enrichment saved yet.{% endif %}
       </span>
+      <span id="enrichment-{{ finding.id }}" class="explanation">No external validation saved yet.</span>
     </div>
   </article>
   {% else %}
